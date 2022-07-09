@@ -5,7 +5,8 @@ const User = require('./../models/User')
 const Differ = require('./../models/Diff')
 const bcrypt = require('bcrypt') //password hashing
 const publication = require('./../models/Pub')
-
+const jwt = require('jsonwebtoken')
+const SECRET_KEY = "SIGNIN_API"
 
 router.get('/signup', (req,res) =>{
     let{name, email, password,dateOfBirth} = req.body
@@ -121,13 +122,17 @@ router.get('/signin', (req,res) =>{
         .then( data => {
             if (data.length){
                 const hashedPassword = data[0].password;
-                
+                const token = jwt.sign({
+                    email: data[0].email,
+                    id: data[0]._id
+                }, SECRET_KEY)
                 bcrypt.compare(password, hashedPassword).then(result =>{
                     if(result){
                         res.json({
                             status: "SUCCESS",
                             message: "Signin Successful",
-                            data: data[0].type
+                            data: data[0].type,
+                            token: token
                         })
                     } else{
                         res.json({
