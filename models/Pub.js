@@ -10,7 +10,8 @@ const PublicationSchema = new Schema({
     SubType: String,
     PublicationName: String,
     ImpactFactor: String,
-    Affiliated: String
+    Affiliated: String,
+    Branch: String
 })
 
 const Publication = mongoose.model('Publication', PublicationSchema)

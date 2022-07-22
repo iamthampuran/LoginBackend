@@ -2,20 +2,25 @@ const express = require('express')
 const router = express.Router()
 //mongodb user model
 const User = require('./../models/User')
-const Differ = require('./../models/Diff')
 const bcrypt = require('bcrypt') //password hashing
 const publication = require('./../models/Pub')
 const jwt = require('jsonwebtoken')
 const SECRET_KEY = "SIGNIN_API"
 
-router.get('/signup', (req,res) =>{
-    let{name, email, password,dateOfBirth} = req.body
+
+
+router.post('/signup', (req,res) =>{
+    res.header("Access-Control-Allow-Origin", "*");
+    let{name, branch, email, password, dateOfBirth} = req.body
+    console.log(req.body)
+    console.log("Branch = ",req.body.branch,"\nEmail = ",req.body.email)
     name = name.trim()
     email = email.trim()
     password = password.trim()
     dateOfBirth = dateOfBirth.trim()
+    branch = branch.trim()
 
-    if(name == "" || email == "" || password == "" || dateOfBirth == "")
+    if(name == "" || email == "" || password == "" || dateOfBirth == "" || branch == "")
     {
         res.json({
             status: "FAILED",
@@ -68,14 +73,10 @@ router.get('/signup', (req,res) =>{
                         email,
                         password: hashedPassword,
                         dateOfBirth,
-                        type: "F"
-                    });
-                    const newDiffer = new Differ({
-                        email,
+                        branch,
                         type: "F"
                     });
                     newUser.save().then(result => {
-                        newDiffer.save()
                         res.json({
                             status: "SUCCESS",
                             message: "Sign Up Successful",
@@ -107,7 +108,8 @@ router.get('/signup', (req,res) =>{
 })
 
 //signin
-router.get('/signin', (req,res) =>{
+router.post('/signin', (req,res) =>{
+    res.header("Access-Control-Allow-Origin", "*");
     let{email, password,} = req.body
     email = email.trim()
     password = password.trim()
@@ -132,6 +134,8 @@ router.get('/signin', (req,res) =>{
                             status: "SUCCESS",
                             message: "Signin Successful",
                             data: data[0].type,
+                            name: data[0].name,
+                            branch: data[0].branch,
                             token: token
                         })
                     } else{
@@ -173,7 +177,8 @@ router.post('/viewprofile', (req,res) =>{
             console.log(result)
             let name = result[0].name
              let email = result[0].email
-             console.log("Name = ",name,"\nEmail = ",email)
+             let branch = result[0].branch
+             console.log("Name = ",name,"\nEmail = ",email,'\nBranch = ',branch)
              const requ = {
                 "Faculties": {$regex: name}
              }
@@ -189,6 +194,7 @@ router.post('/viewprofile', (req,res) =>{
                     "message": "Faculty details found",
                     "name": name,
                     "email": email,
+                    "branch": branch,
                     "data": data
                 })
             }
@@ -197,7 +203,8 @@ router.post('/viewprofile', (req,res) =>{
                     "status": "SUCCESS",
                     "message": "No publications",
                     "name": name,
-                    "email": email
+                    "email": email,
+                    "branch": branch
                 }))
             }
             }).catch(err =>{
@@ -217,38 +224,42 @@ router.post('/viewprofile', (req,res) =>{
 
 router.get('/assignmember', (req,res) =>{
 
-    let {name} = req.body
-    User.updateOne(req.body,
-    {
-        $set:{
-            "type": "M"
-        }
-    })
-    User.find(req.body)
-    .then(data =>{
-        if(data[0].type == "M")
+    let {name,branch} = req.body
+    User.find(req.body).then(result =>{
+        if(!result.length)
         {
             res.json({
-                "status": "SUCCESS",
-
-                "message": "Sucessfully appointed as member",
-                "data": data
+                "status": "FAILED",
+                "message": "Couldn't find the user"
             })
+        }else{
+            User.findOneAndUpdate(req.body,
+                {
+                    "type": "M"
+                
+            }).then(resulting =>{
+                
+                    
+                        res.json({
+                            "status": "SUCCESS",
+            
+                            "message": "Sucessfully appointed "+req.name+" as member",
+                            "data": resulting
+                        })
+                    })
         }
-        else{
+    })
+    .catch(err =>{
             res.json({
                 "status": "FAILED",
-                "message": "Failed in appointing as member"
+                "message": "An error occured",
             })
-        }
-    }).catch(err =>{
-        res.json({
-            "status": "FAILED",
-            "message": "Couldn't find the user"
         })
     })
-       
-    })
-
+           
+        
+    
+    
+   
 
 module.exports = router
